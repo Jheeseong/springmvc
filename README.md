@@ -42,3 +42,34 @@
 - 상황에 맞게 로그 레벨을 조절 가능
 - 시스템 아웃 콘솔 출력 뿐만 아니라, 파일, 네트워크 등, 로그 별도의 위치에 남기는 것이 가능
 - 성능이 system.out보다 좋음
+
+# v1.0 3/2
+# 요청 매핑
+**MappingController**
+
+    @RestController
+    @Slf4j
+    public class MappingController {
+
+    /*
+     * 기본 요청
+     * 둘 다 허용 /hello-basic, /hello-basic/
+     * Http 메서드 모두 허용 - GET,HEAD,PUT,PATCH,DELETE
+     * */
+        @RequestMapping("/hello-basic")
+        public String helloBasic() {
+            log.info("helloBasic");
+            return "ok";
+        }
+        
+**매핑 정보**
+- @RestController
+  - @Controller는 반환 값이 String이면 뷰 이름으로 인식하여 뷰를 찾고 렌더링
+  - @RestController는 반환 값으로 뷰를 찾는 것이 아닌, Http 메시지 바디로 바로 입력. 따라서 실행 결과로 OK 메세지 받기 가능
+- @RequestMapping("/hello-basic")
+  - /hello-basic URL 호출이 오면 이 메서드가 실행되도록 매핑
+  - 대부분 속성을 배열로 제공함으로 {"/hello-basic","/hello-go"} 식의 설정이 가능
+
+**Http 메서드**
+- @RequestMapping에 method 속성으로 Http 메서드를 지정하지 않으면 Http 메서드와 무관하게 호출
+- 모두 허용(GET,HEAD,POST,PUT,PATCH,DELETE)
