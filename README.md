@@ -235,3 +235,93 @@
 - 회원 수정 : PATCH /mapping/users/{userId}
 - 회원 삭제 : DELETE /mapping/users/{userId}
 
+# v1.3 3/5
+# Http 요청 - 기본,헤더 조회
+
+**RequestHeaderController**
+
+    @Slf4j
+    @RestController
+    public class RequestHeaderController {
+
+        @RequestMapping("/headers")
+        public String headers(HttpServletRequest request,
+                          HttpServletResponse response,
+                          HttpMethod httpMethod,
+                          Locale locale,
+                          @RequestHeader MultiValueMap<String, String> headerMap,
+                          @RequestHeader("host") String host,
+                          @CookieValue(value = "myCookie", required = false)
+                          String cookie) {
+
+            log.info("request={}", request);
+            log.info("response={}", response);
+            log.info("httpMethod={}", httpMethod);
+            log.info("locale={}", locale);
+            log.info("headerMap={}", headerMap);
+            log.info("header host={}", host);
+            log.info("myCookie={}", cookie);
+
+            return "ok";
+        }
+    }
+    
+- HttpMethod : Http 메서드를 조회
+- Locale : Locale 정보를 조회
+- @RequestHeader MultiValueMap<String, String> headerMap : 모든 Http 헤더 정보를 map 형식으로 조회
+- @RequestHeader("host") String host : 특정 Http 헤더를 조회
+- 속성
+  - 필수 값 여부 : required
+  - 기본 값 속성 : defaultValue
+- @CookieValue(value = "myCookie", required = false) String cookie : 특정 쿠키를 조회한다.
+- 속성
+  - 필수 값 여부: required
+  - 기본 값: defaultValue
+- MultiValueMap
+  - Map과 유사한데, 하나의 키에 여러 값을 받을 수 있음.
+  - Http header, Http 쿼리 파라미터와 같이 하나의 키에 여러 값을 받을 때 사용
+
+# Http 요청 파라미터 - 쿼리 파라미터, HTML Form
+- HttpServletRequest 와 request.getParameter()을 사용하여 파라미터 조회 가능
+
+**클라이언트에서 서버로 여청 데이터를 전달 시 방법**
+
+- GET - 쿼리 파라미터
+  - /url?username=hello&age=20
+  - 메시지 바디 없이, url의 쿼리 파라미터에 데이터를 포함해서 전달
+- POST - HTML Form
+  - content-type : application/x-www-form-urlencoded
+  - 메시지 바디에 쿼리 파라미터 형식으로 전달
+- HTTP message body
+  - http API에서 주로 사용(JSON,XML,TEXT)
+  - 데이터 형식은 주로 JSON
+
+**RequestParamV1**
+
+    @RequestMapping("/request-param-v1")
+    public void requestParamV1(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String username = request.getParameter("username");
+        int age = Integer.parseInt(request.getParameter("age"));
+        log.info("username = {}, age = {}", username, age);
+
+        response.getWriter().write("ok");
+    }
+    
+- request.getParameter() : HttpServletRequest가 제공하는 방식으로 요청 파라미터를 조회
+- GET 실행 : http://localhost:8080/request-param-v1?username=hello&age=20
+
+**RequestParamV2**
+
+    @ResponseBody
+    @RequestMapping("/request-param-v2")
+    public String requestParamV2(@RequestParam("username") String memberName,
+                                 @RequestParam("age") int memberAge) {
+        log.info("username = {}, age = {}", memberName, memberAge);
+        return "ok";
+    }
+    
+- @RequestParam : 파라미터 이름으로 바인딩
+- @ResponseBody : View 조회를 무시하고, Http message body에 직접 해당 내용 입력
+- @RequestParam의 name(value) 속성이 파라미터 이름으로 사용
+  - @RequestParam("username") String memberName
+  - -> request.getParameter("username")
