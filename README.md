@@ -325,3 +325,86 @@
 - @RequestParam의 name(value) 속성이 파라미터 이름으로 사용
   - @RequestParam("username") String memberName
   - -> request.getParameter("username")
+
+# v1.4 3/6
+**RequestParamV3**
+
+    @ResponseBody
+    @RequestMapping("/request-param-v3")
+    public String requestParamV3(@RequestParam String username,
+                                 @RequestParam int age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- Http 파라미터 이름이 변수 이름과 같을 경우 애노테이션 변수 생략 가능
+
+**RequestParamV4**
+
+    @ResponseBody
+    @RequestMapping("/request-param-v4")
+    public String requestParamV4(String username, int age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- String, int, Integer 등의 단순 타입의 경우 @RequestParam도 생략 가능
+- 애노테이션 생략 시 스프링MVC 내부에서 required=false를 적용
+
+**파라미터 필수 여부 - requestParamRequeired**
+
+    @ResponseBody
+    @RequestMapping("/request-param-required")
+    public String requestParamRequired(@RequestParam(required = true) String username,
+                                 @RequestParam(required = false) Integer age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- @RequestParam.required : 파라미터 필수 여부
+- 파라미터 이름만 있고 값이 없는 경우, 빈 문자로 통과
+- null을 int에 입력하는 것은 불가능하므로, Integer로 변경이 필수
+
+**파라미터 Map으로 조회 - requestParamMap**
+
+    @ResponseBody
+    @RequestMapping("/request-param-map")
+    public String requestParamMap(@RequestParam Map<String, Object> paramMap) {
+        log.info("username = {}, age = {}", paramMap.get("username"), paramMap.get("age"));
+        return "ok";
+    }
+    
+- 파라미터를 Map, MultiValueMap으로 조회
+
+# Http 요청 파라미터 - @ModelAttribute
+- 요청 파라미터를 바인딩 받을 객체를 생성하여 그 객체에 값을 주입(HelloData 클라스 생성)
+
+**modelAttributeV1**
+
+    @ResponseBody
+    @RequestMapping("/model-attribute-v1")
+    public String modelAttributeV1(@ModelAttribute HelloData helloData) {
+        log.info("username = {}, age = {}", helloData.getUsername(), helloData.getAge());
+        return "ok";
+    }
+    
+- 요청 파라미터의 이름으로 HelloData 객체의 프로퍼티를 검색, 그리고 해당 프로퍼티의 setter을 호출하여 파라미터 값을 바인딩
+
+**프로퍼티**
+- 객체에 get... 메서드가 존재할 경우, 이 객체는 ...의 프로퍼티를 가짐
+- ... 프로퍼티 값을 변경 시, set...이 호출되고, 조회하면 get...이 호출
+
+**modelAttributeV2**
+
+    @ResponseBody
+    @RequestMapping("/model-attribute-v2")
+    public String modelAttributeV2(HelloData helloData) {
+        log.info("username = {}, age = {}", helloData.getUsername(), helloData.getAge());
+        return "ok";
+    }
+    
+- @ModelAttribute 생략 가능
+  - 그러나 @RequestParam도 생략이 가능하여 혼란 발생 가능성 존재
+- String, int, Integer 같은 단순 타입 = @RequestParam
+- 나머지 타입 = @ModelAttribute
+
