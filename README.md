@@ -325,3 +325,261 @@
 - @RequestParam의 name(value) 속성이 파라미터 이름으로 사용
   - @RequestParam("username") String memberName
   - -> request.getParameter("username")
+
+# v1.4 3/6
+**RequestParamV3**
+
+    @ResponseBody
+    @RequestMapping("/request-param-v3")
+    public String requestParamV3(@RequestParam String username,
+                                 @RequestParam int age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- Http 파라미터 이름이 변수 이름과 같을 경우 애노테이션 변수 생략 가능
+
+**RequestParamV4**
+
+    @ResponseBody
+    @RequestMapping("/request-param-v4")
+    public String requestParamV4(String username, int age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- String, int, Integer 등의 단순 타입의 경우 @RequestParam도 생략 가능
+- 애노테이션 생략 시 스프링MVC 내부에서 required=false를 적용
+
+**파라미터 필수 여부 - requestParamRequeired**
+
+    @ResponseBody
+    @RequestMapping("/request-param-required")
+    public String requestParamRequired(@RequestParam(required = true) String username,
+                                 @RequestParam(required = false) Integer age) {
+        log.info("username = {}, age = {}", username, age);
+        return "ok";
+    }
+    
+- @RequestParam.required : 파라미터 필수 여부
+- 파라미터 이름만 있고 값이 없는 경우, 빈 문자로 통과
+- null을 int에 입력하는 것은 불가능하므로, Integer로 변경이 필수
+
+**파라미터 Map으로 조회 - requestParamMap**
+
+    @ResponseBody
+    @RequestMapping("/request-param-map")
+    public String requestParamMap(@RequestParam Map<String, Object> paramMap) {
+        log.info("username = {}, age = {}", paramMap.get("username"), paramMap.get("age"));
+        return "ok";
+    }
+    
+- 파라미터를 Map, MultiValueMap으로 조회
+
+# Http 요청 파라미터 - @ModelAttribute
+- 요청 파라미터를 바인딩 받을 객체를 생성하여 그 객체에 값을 주입(HelloData 클라스 생성)
+
+**modelAttributeV1**
+
+    @ResponseBody
+    @RequestMapping("/model-attribute-v1")
+    public String modelAttributeV1(@ModelAttribute HelloData helloData) {
+        log.info("username = {}, age = {}", helloData.getUsername(), helloData.getAge());
+        return "ok";
+    }
+    
+- 요청 파라미터의 이름으로 HelloData 객체의 프로퍼티를 검색, 그리고 해당 프로퍼티의 setter을 호출하여 파라미터 값을 바인딩
+
+**프로퍼티**
+- 객체에 get... 메서드가 존재할 경우, 이 객체는 ...의 프로퍼티를 가짐
+- ... 프로퍼티 값을 변경 시, set...이 호출되고, 조회하면 get...이 호출
+
+**modelAttributeV2**
+
+    @ResponseBody
+    @RequestMapping("/model-attribute-v2")
+    public String modelAttributeV2(HelloData helloData) {
+        log.info("username = {}, age = {}", helloData.getUsername(), helloData.getAge());
+        return "ok";
+    }
+    
+- @ModelAttribute 생략 가능
+  - 그러나 @RequestParam도 생략이 가능하여 혼란 발생 가능성 존재
+- String, int, Integer 같은 단순 타입 = @RequestParam
+- 나머지 타입 = @ModelAttribute
+
+# v1.5 3/7
+# Http 요청 메시지 - 단순 텍스트
+- 요청 파라미터와 다르게 Http 메시지 바디를 통해 데이터가 넘어오는 경우 @RequestParam, @ModelAttribute 사용 불가
+
+**RequestBodyStringV1**
+
+    @PostMapping("/request-body-string-v1")
+    public void requestBodyStringV1(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        ServletInputStream inputStream = request.getInputStream();
+        String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+        log.info("messageBody = {}", messageBody);
+
+        response.getWriter().write("ok");
+    }
+    
+- Http 메시지 바디의 데이터를 InputStream을 사용해서 확인
+
+**RequestBodyStringV2**
+
+    @PostMapping("/request-body-string-v2")
+    public void requestBodyStringV2(InputStream inputStream, Writer responseWriter) throws IOException {
+        String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+        log.info("messageBody = {}", messageBody);
+
+        responseWriter.write("ok");
+    }
+    
+- InputStream(Reader) : Http 요청 메시지 바디의 내용을 직접 조회
+- OutputStream(Writer) : Http 응답 메시지 바디에 직접 결과 출력
+
+**RequestBodyStringV3**
+
+    @PostMapping("/request-body-string-v3")
+    public HttpEntity requestBodyStringV3(HttpEntity<String> httpEntity) throws IOException {
+        String messageBody = httpEntity.getBody();
+
+        log.info("messageBody = {}", messageBody);
+
+        return new HttpEntity("ok");
+    }
+    
+- HttpEntity : Http Header, body 정보를 편리하게 조회
+  - 메시지 바디 정보를 직접 조회
+  - 요청 파라미터를 조회하는 기능과는 관계 X
+  - 응답에도 사용 가능
+- RequestEntity : HttpMethod, url 정보 추가, 요청에서 사용
+- ResponseEntity : Http 상태 코드 설정 가능, 응답에서 사용
+- 스프링 MVC는 메시지 바디를 읽어 문자나 객체로 변환 후 전달할 때 **메시지 컨버터(HttpMessageConverter)** 기능을 사용
+
+**RequestBodyStringV4**
+    
+    @ResponseBody
+    @PostMapping("/request-body-string-v4")
+    public String requestBodyStringV4(@RequestBody String messageBody) {
+
+        log.info("messageBody = {}", messageBody);
+
+        return "ok";
+    }
+    
+- @RequestBody : Http 메시지 바디 정보를 편리하게 조회 가능, 헤더 정보가 필요하다면 HttpEntity, @RequestHeader을 사용
+- 요청 파라미터 vs Http 메시지 바디
+  - 요청 파라미터를 조회하는 기능 : @RequestParam, @ModelAttribute
+  - Http 메시지 바디를 직접 조회하는 기능 : @RequestBody
+
+# Http 요청 메시지 - JSON
+- Http API에서 주로 사용하는 JSON 데이터 형식 조회
+
+**RequestBodyJsonV1**
+
+    @PostMapping("/request-body-json-v1")
+    public void requestBodyJsonV1(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        ServletInputStream inputStream = request.getInputStream();
+        String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+        log.info("messageBody = {}",messageBody);
+        HelloData data = objectMapper.readValue(messageBody, HelloData.class);
+        log.info("username = {}, age = {}", data.getUsername(), data.getAge());
+
+        response.getWriter().write("ok");
+    }
+    
+- HttpSevletRequest를 사용해서 Http 메시지 바디에서 데이터를 읽은 후, 변환
+- 문자로 된 JSON 데이터를 objectMapper을 사용해서 자바 객체로 변환
+
+**RequestBodyJsonV2**
+
+    @ResponseBody
+    @PostMapping("/request-body-json-v2")
+    public String requestBodyJsonV2(@RequestBody String messageBody) throws IOException {
+
+        HelloData data = objectMapper.readValue(messageBody, HelloData.class);
+        log.info("username = {}, age = {}", data.getUsername(), data.getAge());
+
+        return "ok";
+    }
+    
+- @RequestBody를 사용해서 Http 메시지 바디를 꺼내고 저장
+- objectMapper을 통해서 자바 객체로 변환
+
+**RequestBodyJsonV3 - RequestBody 객체 변환**
+
+    @ResponseBody
+    @PostMapping("/request-body-json-v3")
+    public String requestBodyJsonV3(@RequestBody HelloData data) {
+
+        log.info("username = {}, age = {}", data.getUsername(), data.getAge());
+
+        return "ok";
+    }
+    
+- @RequestBody : RequestBody에 직접 만든 클래스 객체를 지정
+  - Http 메시지 컨버터가 메시지 바디 내용을 원하는 문자 혹은 객체로 변환
+  - V2에서 한 과정을 메시지 컨버터가 대진 작업
+  - 생략 불가능( 생략 시 @ModelAttribute가 적용) -> 요청 파라미터를 처리하게 됨
+
+**RequestBodyJsonV5**
+
+    @ResponseBody
+    @PostMapping("/request-body-json-v5")
+    public HelloData requestBodyJsonV5(@RequestBody HelloData data) {
+        log.info("username = {}, age = {}", data.getUsername(), data.getAge());
+        return data;
+    }
+    
+- 메시지 바디 정보를 직접 반환(public HelloData requestBodyJsonV5)
+
+# Http 응답 - 정적 리소스, 뷰 템플릿
+- 스프링에서 응답 데이터를 만드는 3가지 방법
+  - 정적 리소스
+  - 뷰 템플릿
+  - Http 메시지 사용
+
+**정적 리소스**
+- 스트링 부트는 클래스패스의 다음 디렉토리에 있는 정적 리소스를 제공
+- src/main/resorces는 리소스를 보관하는 곳이면서, 클래스패스의 시작 경로
+
+**뷰 템플릿**
+- 뷰 템플릿을 거쳐서 HTML이 생성되고, 뷰가 응답을 만들어서 전달
+- 뷰 탬플릿 경로 : src/main/resources/templates
+
+**ResponseViewV1**
+
+    @RequestMapping("/response-view-v1")
+    public ModelAndView responseViewV1() {
+        ModelAndView mv = new ModelAndView("response/hello")
+                .addObject("data", "hello!");
+
+        return mv;
+    }
+    
+**ResponseViewV2**
+
+    @RequestMapping("/response-view-v2")
+    public String responseViewV2(Model model) {
+        model.addAttribute("data", "Hello!");
+        return "response/hello";
+    }
+    
+- @ResponseBody가 없을 경우 response/hello로 뷰 리졸버가 실행되어 뷰를 찾고, 렌더링
+- @ResponseBody가 있을 경우 뷰 리졸버를 실행하지 않고, Http 메시지 바디에 직접 response/hello 문자가 입력 -> 여기서 뷰의 논리 이름을 반환 시 다음 경로의 뷰 템플릿이 렌더링
+
+**ResponseViewV3**
+
+    @RequestMapping("/response/hello")
+    public void responseViewV3(Model model) {
+        model.addAttribute("data", "Hello!!");
+    }
+    
+- void로 반환 시 @Controller가 존재하고, HttpSelveletResponse, OutputStream(Writer)가 없을 경우 요청 URL을 참고해서 논리 뷰 이름으로 사용
+- 명시성이 떨어지고 딱 맞는 경우가 없어서 권장 X
+- @ResponseBody 혹은 HttpEntity를 사용 시, 뷰 템플렛을 사용하는 것이 아닌, Http 메시지 바디에 직접 응답 데이터 출력이 가능
