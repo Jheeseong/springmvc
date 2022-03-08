@@ -583,3 +583,139 @@
 - void로 반환 시 @Controller가 존재하고, HttpSelveletResponse, OutputStream(Writer)가 없을 경우 요청 URL을 참고해서 논리 뷰 이름으로 사용
 - 명시성이 떨어지고 딱 맞는 경우가 없어서 권장 X
 - @ResponseBody 혹은 HttpEntity를 사용 시, 뷰 템플렛을 사용하는 것이 아닌, Http 메시지 바디에 직접 응답 데이터 출력이 가능
+
+# v1.6 3/8
+# Http 응답 - Http API, 메시지 바디에 직접 입력
+
+**responseBodyV1**
+
+    @GetMapping("/response-body-string-v1")
+    public void responseBodyV1(HttpServletResponse response) throws IOException {
+        response.getWriter().write("ok");
+    }
+    
+- HttpServletResponse 객체를 통해 Http 메시지 바디에 응답 메시지를 전달
+
+**responseBodyV2**
+
+    @GetMapping("/response-body-string-v2")
+    public ResponseEntity<String> responseBodyV2() {
+        return new ResponseEntity<>("ok", HttpStatus.OK);
+    }
+    
+- ResponseEntity는 HttpEntity의 Http 메시지 헤더, 바디 정보와 Http 응답 코드 설정이 가능
+
+**responseBodyV3**
+
+    @ResponseBody
+    @GetMapping("/response-body-string-v3")
+    public String responseBodyV3() {
+        return "ok";
+    }
+    
+- @ResponseBody를 사용할 경우, view를 사용하지 않고 Http 메시지 컨버터를 통해서 Http 메시지를 직접 입력이 가능
+
+**responseBodyJsonV1**
+
+    @GetMapping("/response-body-json-v1")
+    public ResponseEntity<HelloData> responseBodyJsonV1() {
+        HelloData helloData = new HelloData();
+        helloData.setUsername("UserA");
+        helloData.setAge(20);
+
+        return new ResponseEntity<>(helloData, HttpStatus.OK);
+    }
+    
+- ResponseEntity를 반환하며, Http 컨버터를 통해서 JSON 형식으로 변환되어서 반환
+
+**responseBodyJsonV2**
+
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    @GetMapping("/response-body-json-v2")
+    public HelloData responseBodyJsonV2() {
+        HelloData helloData = new HelloData();
+        helloData.setUsername("UserA");
+        helloData.setAge(20);
+
+        return helloData;
+    }
+    
+- ResponseEntity는 Http 응답코드를 설정할 수 있으나, @ResponseBody 경우 설정이 어려움
+- @ResponseStatus(Httpstatus.ok) 애노테이션을 사용하면 응답코드 설정이 가능하나, 동적으로 변경이 불가능
+
+**RestController**
+- @Controller 대신에 @RestController 애노테이션 사용 시, 해당 컨트롤러 모두에 @ResponseBody가 적용되는 효과를 가짐
+
+# HTTP 메시지 컨버터
+- Http API 처럼 JSON 데이터를 HTTP 메시지 바디에 직접 읽거나 쓰는 경우 HTTP 메시지 컨버터를 사용
+
+![image](https://user-images.githubusercontent.com/96407257/157252660-65addab0-82a8-4b95-998d-a937cc1f62df.png)
+
+- @ResponseBody를 사용
+  - HTTP의 바디에 문자 내용을 직접 반환
+  - viewResolver 대신에 HttpMessageConverter가 동작
+  - 기본 문자처리: StringHttpMessageConverter
+  - 기본 객체처리: MappingJackson2HttpMessageConverter
+  - byte 처리 등등 기타 여러 HttpMessageConverter가 기본으로 등록되어 있음
+- 스프링 MVC의 HTTP 메시지 컨버터 적용 상황
+  - HTTP 요청: @RequestBody , HttpEntity(RequestEntity)
+  - HTTP 응답: @ResponseBody , HttpEntity(ResponseEntity)
+
+**스프링 부트 기본 메시지 컨버터**
+
+    0 = ByteArrayHttpMessageConverter
+    1 = StringHttpMessageConverter 
+    2 = MappingJackson2HttpMessageConverter
+    
+- ByteArrayHttpMessageConverter
+  - byte 데이터를 처리
+  - 클래스 타입 : byte[], 미디어타입 : */*
+- StringHttpMessageConverter
+  - String 문자로 데이터를 처리
+  - 클래스 타입 : String, 미디어타입 : */*
+- MappingJackson2HttpMessageConverter
+- application/json
+- 클래스 타입 : HashMap, 미디어타입 : application/json 관련
+
+**Http 요청 데이터 읽기**
+1. Http 요청이 오고, 컨트롤러에서 @RequestBody, HttpEntity 파라미터를 사용
+2. 메시지 컨버터가 메시지를 읽을 수 있는지 확인을 위해 canRead()를 호출
+3. 대상 클래스 타입 체크(@RequestBody의 대상클래스)
+4. Http 요청의 Content-Type 미디어 타입을 체크
+5. 조건 만족 시 read() 호출을 통해 객체를 생성, 반환
+
+**Http 응답 데이터 생성**
+1. 컨트롤러에서 @ResponseBody, HttpEntity로 값이 반환
+2. 메시지 컨버터가 메시지를 읽을 수 있는지 확인을 위해 canWrite()를 호출
+3. 대상 클래스 타입 체크(return의 대상 클래스)
+4. Http 요청의 Accept 미디어 타입을 체크(@RequstMapping의 produces)
+5. 조건 만족 시 write() 호출을 통해 Http 응답 메시지 바디에 데이터 생성
+
+# 요청 매핑 핸들러 어뎁터 구조
+![image](https://user-images.githubusercontent.com/96407257/157256164-96e4a8cf-8b8e-4bb6-bfa5-438199bf3ab7.png)
+
+- Http 메시지 컨버터는 @RequestMapping을 처리하는 핸들러 어댑터인 RequestMappingHandlerAdapter(요청 매핑 핸들러 어뎁터)에 존재
+
+**RequestMappingHandlerAdater 동작 방식**  
+![image](https://user-images.githubusercontent.com/96407257/157256571-ff352df8-da3d-4a4f-8f01-321614659238.png)
+- 애노테이션 기반의 컨트롤러는 다양한 파라미터를 유연하게 사용이 가능(HttpServletRequest, Model, @RequestParam, @ModelAttribute, @RequestBody, HttpEntity)
+- ArgumentResolver를 통해 파라미터를 유연하게 처리가 가능
+- RequestMappingHandlerAdaptor는 ArgumentResolver를 호출해서 컨트롤러(핸들러)가 필요로 하는 다양한 파라미터의 값(객체)을 생성
+- 파라미터 값이 모두 준비 시 컨트롤러를 호출하면서 값을 전달
+
+**ArgumentResolver의 동작방식**
+- suppoertsParameter()를 호출해서 해당 파라미터를 지원하는지 체크
+- 지원할 경우 ResolveArgument()를 호출하여 실제 객체를 생성
+- 생성된 객체가 컨트롤러 호출 시 전송
+
+**Http 메시지 컨버터 위치**  
+![image](https://user-images.githubusercontent.com/96407257/157258000-29ecb730-8769-4e2b-95d8-9333f2b66d71.png)
+
+- 요청의 경우
+  - @RequstBody를 처리하는 ArgumentResolver와, HttpEntity를 처리하는 ArgumentResolver
+  - ArgumentResolver 들이 HTTP 메시지 컨버터를 사용해서 필요한 객체를 생성
+- 응답의 경우
+  - @ResponseBody 와 HttpEntity 를 처리하는 ReturnValueHandler
+  - 여기에서 HTTP 메시지 컨버터를 호출해서 응답 결과를 생성
+- 스프링 MVC는 @RequestBody @ResponseBody 가 있을 경우 RequestResponseBodyMethodProcessor (ArgumentResolver) HttpEntity 가 있을  HttpEntityMethodProcessor (ArgumentResolver)를 사용
