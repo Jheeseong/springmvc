@@ -719,3 +719,58 @@
   - @ResponseBody 와 HttpEntity 를 처리하는 ReturnValueHandler
   - 여기에서 HTTP 메시지 컨버터를 호출해서 응답 결과를 생성
 - 스프링 MVC는 @RequestBody @ResponseBody 가 있을 경우 RequestResponseBodyMethodProcessor (ArgumentResolver) HttpEntity 가 있을  HttpEntityMethodProcessor (ArgumentResolver)를 사용
+
+# v1.7 3/9
+# Thymeleaf
+**타임리프 사용 선언**
+- xmlns:th="http://www.thymeleaf.org"
+
+**속성 변경 - th:href**
+- th:href="@{/css/bootstrap.min.css}"
+- href="value1" 을 th:href="value2" 의 값으로 변경
+- 타임리프 뷰 템플릿을 거칠 시 원래 값을 th:xxx 값으로 변경, 없다면 새로 생성
+
+**타임리프 핵심**
+- th:xxx가 붙은 부분은 서버사이드에서 렌더링되고, 기존 것을 대체
+- HTML을 파일로 직접 열었을 경우, th:xxx가 있어도 무시
+- 따라서 HTML 파일 보기를 유지하면서 탬플릿 기능도 수행
+
+**URL 링크 표현식 -@(...)**
+- th:href="@{/css/bootstrap.min.css}"
+- @(...) 타임 리프는 URL 링크 사용 시 @(...)을 사용
+- 서블릿 컨텍스트를 자동으로 포함
+
+**속성 변경 - th:onclick**
+- th:onclick="|location.href='@{/basic/items/add}'|"
+- 버튼 클릭 시 하이퍼링크 동작을 설정
+
+**리터럴 대체 -[...]**
+- 타임리프에서 문자와 표현식 등은 분리되어 있기 때문에 더해서 사용
+  - ex) span th:text="'Welcome to our application, ' + ${user.name} + '!'"
+- 리터럴 문법을 대체할 시 더하기 없이 사용 가ㅡㅇ
+  - ex) span th:text="|Welcome to our application, ${user.name}!|"
+
+**반복 출력 - th:each**
+- tr th:each="item : ${items}"
+- 반복은 th:each 를 사용 시 모델에 포함된 컬렉션 데이터가 변수에 하나씩 포함되고, 반복문 안에서 변수 사용이 가능
+- 컬랙션 수 만큼 하위 태그를 포함해서 생성
+
+**변수 표현식 - &(...)**
+- td th:text="${item.price}">10000</td
+- 내용의 값을 th:text 값으로 변경
+- 동적 내용 주입이 가능
+
+**URL 링크 표현식2 -@(...)**
+- th:href="@{/basic/items/{itemId}(itemId=${item.id})}"
+- URL 링크 표현식 사용 시 경로를 탬플릿처럼 사용 가능
+- 경로 변수뿐만 아니라 쿼리 파라미터도 생성
+  - ex) th:href="@{/basic/items/{itemId}(itemId=${item.id}, query='test')}"
+
+**URL 링크 간소화**
+- th:href="@{|/basic/items/${item.id}|}"
+- 리터럴 대체 문법을 활용하여 간소화 가능
+
+**타임리프의 장점**
+- 순수 HTML 파일을 웹 브라우저에서 열어도 내용 확인이 가능
+- 서버를 통해 뷰 템플릿을 거칠 경우 동적으로 변경된 결과 확인 가능
+- 순수 HTML을 유지하면서 뷰 템플릿 역시 사용 가능한 특징을 가진 것을 네츄럴 템플릿이라 
